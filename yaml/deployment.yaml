@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: actions-runner
+  labels:
+    app: actions-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: actions-runner
+  template:
+    metadata:
+      labels:
+        app: actions-runner
+    spec:
+      imagePullSecrets:
+        - name: github-packages
+      containers:
+        - name: runner
+          image: juselius/actions-runner:latest
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: actions-runner
+          env:
+            - name: GITHUB_OWNER
+              value:
+            - name: GITHUB_REPOSITORY
+              value:
+            - name: DOCKER_TLS_CERTDIR
+              value: /certs
+            - name: DOCKER_HOST
+              value: tcp://localhost:2376
+            - name: DOCKER_TLS_VERIFY
+              value: "1"
+            - name: DOCKER_CERT_PATH
+              value: /certs/client
+          volumeMounts:
+            - name: docker-certs
+              mountPath: /certs
+            - name: runner
+              mountPath: /home/runner
+        - name: docker
+          image: docker:stable-dind
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: /certs
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: docker-storage
+              mountPath: /var/lib/docker
+            - name: docker-certs
+              mountPath: /certs
+            - name: runner
+              mountPath: /home/runner
+      volumes:
+        - name: docker-storage
+          emptyDir: {}
+        - name: docker-certs
+          emptyDir: {}
+        - name: runner
+          emptyDir: {}
