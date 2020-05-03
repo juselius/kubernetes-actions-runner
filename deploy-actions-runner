@@ -2,6 +2,7 @@
 
 for i in "$@"; do
     case $i in
+        --kubernetes) kubernetes=1; shift ;;
         -n) shift; namespace="$1"; shift;;
         -o) shift; owner="$1"; shift ;;
         -t) shift; github_token="$1"; shift ;;
@@ -11,10 +12,12 @@ for i in "$@"; do
 done
 
 if [ -z "$namespace" -o -z "$owner" -o -z "$github_token" ]; then
-    echo "usage: deploy-actions-runner -n namespace -o owner -t token [-r repo] [ -p packages token ]"
+    echo "usage: deploy-actions-runner -n namespace -o owner -t token
+    [--kubernetes] [-r repo] [ -p packages token ]"
     exit 0
 fi
 
+deploy_kubernetes () {
 cat << EOF > yaml/github-settings.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -32,22 +35,38 @@ spec:
               value: $repository
 EOF
 
-if [ ! -z github_packages_token ]; then
-    kubectl create secret docker-registry github-packages \
-        --dry-run \
-        --docker-server=docker.pkg.github.com \
-        --docker-username=$owner \
-        --docker-password=$github_packages_token \
-        -o yaml > yaml/github-packages-secret.yaml
+    if [ ! -z github_packages_token ]; then
+        kubectl create secret docker-registry github-packages \
+            --dry-run \
+            --docker-server=docker.pkg.github.com \
+            --docker-username=$owner \
+            --docker-password=$github_packages_token \
+            -o yaml > yaml/github-packages-secret.yaml
+    fi
+
+    if [ ! -z $repository ]; then
+        owner=$(echo $repository | tr / -)
+    fi
+
+    sed "s,@namespace@,$namespace,g
+         s,@owner@,$owner,g
+         s,@github_token@,$github_token,g
+         " yaml/kustomization.in > yaml/kustomization.yaml
+
+    kubectl kustomize yaml
+}
+
+deploy_local () {
+    docker run --rm -ti \
+        -e GITHUB_OWNER=$owener \
+        -e GITHUB_REPOSITORY=$repository \
+        -e GITHUB_TOKEN=$github_token \
+        -e LABELS=local \
+        juselius/actions-runner:latest
+}
+
+if [ -z "$kubernetes" ]; then
+    deploy_local
+else
+    deploy_kubernets
 fi
-
-if [ ! -z $repository ]; then
-    owner=$(echo $repository | tr / -)
-fi
-
-sed "s,@namespace@,$namespace,g
-     s,@owner@,$owner,g
-     s,@github_token@,$github_token,g
-     " yaml/kustomization.in > yaml/kustomization.yaml
-
-kubectl kustomize yaml

@@ -14,8 +14,11 @@ sudo rm ../runner.tgz
 RUNNER_WORKDIR=$HOME/_work
 mkdir -p $RUNNER_WORKDIR
 
+if [ ! -z "$LABELS" ]; then
+    LABELS="--labels $LABELS"
+fi
 ./config.sh \
-    --name $(hostname) \
+    --name $(hostname) $LABELS \
     --token ${RUNNER_TOKEN} \
     --url https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY} \
     --work ${RUNNER_WORKDIR} \
