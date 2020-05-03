@@ -25,8 +25,9 @@ fi
     --unattended \
     --replace
 
+echo "$HOME/config.sh remove --unattended --token ${RUNNER_TOKEN}" > $HOME/remove.sh
 remove() {
-    ./config.sh remove --unattended --token "${RUNNER_TOKEN}"
+    /bin/sh $HOME/remove.sh
 }
 
 trap remove 1 2 3 6 9 11 15

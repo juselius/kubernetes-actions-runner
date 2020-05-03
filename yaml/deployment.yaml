@@ -20,6 +20,10 @@ spec:
         - name: runner
           image: juselius/actions-runner:latest
           imagePullPolicy: Always
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "/bin/sh", "/home/runner/remove.sh" ]
           envFrom:
             - secretRef:
                 name: actions-runner
