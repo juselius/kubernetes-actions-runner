@@ -1,19 +1,24 @@
 #!/bin/sh
 
+namespace=default
+
 for i in "$@"; do
     case $i in
         --kubernetes) kubernetes=1; shift ;;
-        -n) shift; namespace="$1"; shift;;
+        --local) kubernetes=0; shift ;;
         -o) shift; owner="$1"; shift ;;
         -t) shift; github_token="$1"; shift ;;
+        -n) shift; namespace="$1"; shift;;
         -r) shift; repository="$1"; shift ;;
         -p) shift; github_packages_token="$1"; shift ;;
     esac
 done
 
-if [ -z "$namespace" -o -z "$owner" -o -z "$github_token" ]; then
-    echo "usage: deploy-actions-runner -n namespace -o owner -t token
-    [--kubernetes] [-r repo] [ -p packages token ]"
+if [ -z "$owner" -o -z "$github_token" -o -z "$kubernetes" ]; then
+cat << EOF
+usage: deploy-actions-runner -o owner -t token [-r repo]
+       [--local] [--kubernetes] [-n namespace] [ -p packages token ]
+EOF
     exit 0
 fi
 
@@ -57,16 +62,21 @@ EOF
 }
 
 deploy_local () {
-    docker run --rm -ti \
-        -e GITHUB_OWNER=$owener \
+    vol=/tmp/action-runner.$$
+    mkdir -p $vol/runner
+
+    docker run --rm --name action-runner \
+        -e GITHUB_OWNER=$owner \
         -e GITHUB_REPOSITORY=$repository \
         -e GITHUB_TOKEN=$github_token \
         -e LABELS=local \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v $vol/runner:/home/runner \
         juselius/actions-runner:latest
 }
 
-if [ -z "$kubernetes" ]; then
-    deploy_local
-else
+if [ "$kubernetes" = "1" ]; then
     deploy_kubernets
+else
+    deploy_local
 fi
