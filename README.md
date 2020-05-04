@@ -1,4 +1,4 @@
-# GitHub Actions Runner for Kubernetes
+# GitHub Actions Runner for Docker and Kubernetes
 
 Self-hosted GitHub Actions runner for deployment in Kubernetes. The runner can
 also be run locally, connected directly to the host docker daemon.
