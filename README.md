@@ -22,6 +22,33 @@ usage: deploy-actions-runner -o owner -t token [-r repo]
        [--local] [--kubernetes] [-n namespace] [ -p packages token ]
 ```
 
+### Authentication
+
+The project includes a small tool to get runner tokens from GitHub. It can
+authenticate either using PATs or as a GitHub App. In App mode, it can be used
+to start organization wide runners.
+
+### Build
+
+The provided Dockerfile will build a docker image with the authentication tool
+and actions runnner installed.
+
+#### Plain runner
+
+To build a minimal Docker image, with just the runner and authentication tool:
+
+```
+docker build -t actions-runner:latest --target runner .
+```
+
+#### Runner with .NET Core 3.1, Node 12, yarn and headless Chrome
+
+To build a runner image for use with the F# SAFE-Template for web
+development:
+
+```
+docker build -t actions-runner-safe:latest .
+```
 
 ### Motivation
 
