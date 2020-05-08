@@ -1,5 +1,7 @@
 # GitHub Actions Runner for Docker and Kubernetes
 
+![Build](https://github.com/juselius/actions-runner-kubernetes/workflows/Build/badge.svg)
+
 Self-hosted GitHub Actions runner for deployment in Kubernetes. The runner can
 also be run locally, connected directly to the host docker daemon.
 
