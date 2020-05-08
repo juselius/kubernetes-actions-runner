@@ -1,4 +1,7 @@
 *~
-yaml/kustomization.yaml
-yaml/github-settings.yaml
-yaml/github-packages-secret.yaml
+yaml/
+.fake
+.ionide
+bin/
+obj/
+settings/
