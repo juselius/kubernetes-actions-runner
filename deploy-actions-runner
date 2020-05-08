@@ -1,29 +1,42 @@
 #!/bin/sh
 
 namespace=default
+auth=app
+kubernetes=1
+repository=""
+settings_dir=$(pwd)
 
 for i in "$@"; do
     case $i in
-        --kubernetes) kubernetes=1; shift ;;
-        --local) kubernetes=0; shift ;;
-        -o) shift; owner="$1"; shift ;;
-        -t) shift; github_token="$1"; shift ;;
-        -n) shift; namespace="$1"; shift;;
-        -r) shift; repository="$1"; shift ;;
-        -p) shift; github_packages_token="$1"; shift ;;
+        --docker) kubernetes=0; shift ;;
+        --owner) shift; owner="$1"; shift ;;
+        --token) shift; auth="token" ;;
+        --namespace) shift; namespace="$1"; shift;;
+        --repository) shift; repository="$1"; shift ;;
+        --settings_dir) shift; settings_dir="$1"; shift ;;
+        --registry_token) shift; github_registry_token="$1"; shift ;;
     esac
 done
 
-if [ -z "$owner" -o -z "$github_token" -o -z "$kubernetes" ]; then
+if [ -z "$owner" ]; then
 cat << EOF
-usage: deploy-actions-runner -o owner -t token [-r repo]
-       [--local] [--kubernetes] [-n namespace] [ -p packages token ]
+usage: deploy-actions-runner --owner owner
+       [--token] [--repository repo] [--settings /path/to/dir] [--docker]
+       [--namespace namespace] [ --registry_token github registry token ]
 EOF
     exit 0
 fi
 
+if [ "$auth" = "token" -a -z "$repository" ]; then
+  echo "ERROR: Specified --token without --repostory"
+  exit 0
+fi
+
+echo $settings_dir | grep -q '^/'
+[ $? != 0 ] && echo "ERROR: Settings dir must be absolute path" && exit 1
+
 deploy_kubernetes () {
-cat << EOF > yaml/github-settings.yaml
+cat << EOF > yaml/patch.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -38,25 +51,57 @@ spec:
               value: $owner
             - name: GITHUB_REPOSITORY
               value: $repository
+            - name: GITHUB_AUTH
+              value: $auth
 EOF
 
-    if [ ! -z github_packages_token ]; then
+    if [ ! -z "$github_registry_token" ]; then
         kubectl create secret docker-registry github-packages \
             --dry-run \
             --docker-server=docker.pkg.github.com \
             --docker-username=$owner \
-            --docker-password=$github_packages_token \
+            --docker-password=$github_registry_token \
             -o yaml > yaml/github-packages-secret.yaml
+    fi
+
+    if [ -f ${settings_dir}/${owner}.pem ]; then
+        kubectl create secret generic github-auth-pem \
+            --dry-run \
+            --from-file=file=${settings_dir}/${owner}.pem \
+            -o yaml > yaml/github-auth-secret.yaml
+    fi
+
+    if [ -f ${settings_dir}/${owner}.json ]; then
+        kubectl create configmap authsettings \
+            --dry-run \
+            --from-file=settings=${settings_dir}/${owner}.json \
+            -o yaml > yaml/authsettings-configmap.yaml
     fi
 
     if [ ! -z $repository ]; then
         owner=$(echo $repository | tr / -)
     fi
 
-    sed "s,@namespace@,$namespace,g
-         s,@owner@,$owner,g
-         s,@github_token@,$github_token,g
-         " yaml/kustomization.in > yaml/kustomization.yaml
+    # sed "s,@namespace@,$namespace,g
+    #      s,@owner@,$owner,g
+    #      " kubernetes/kustomization.yaml > yaml/kustomization.yaml
+cat << EOF > yaml/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: $namespace
+nameSuffix: -$owner
+bases:
+- ../kubernetes
+
+patchesStrategicMerge:
+- patch.yaml
+
+resources:
+  - github-packages-secret.yaml
+  - github-auth-secret.yaml
+  - authsettings-configmap.yaml
+EOF
 
     kubectl kustomize yaml
 }
@@ -65,18 +110,20 @@ deploy_local () {
     vol=/tmp/action-runner.$$
     mkdir -p $vol/runner
 
-    docker run --rm --name action-runner \
+    echo docker run --rm --name action-runner \
         -e GITHUB_OWNER=$owner \
         -e GITHUB_REPOSITORY=$repository \
-        -e GITHUB_TOKEN=$github_token \
+        -e GITHUB_AUTH=$auth \
         -e LABELS=local \
         -v /var/run/docker.sock:/var/run/docker.sock \
+        -v ${settings_dir}/${owner}.pem:/home/runner/auth.pem \
+        -v ${settings_dir}/${owner}.json:/home/runner/auth.json \
         -v $vol/runner:/home/runner \
         juselius/actions-runner:latest
 }
 
 if [ "$kubernetes" = "1" ]; then
-    deploy_kubernets
+    deploy_kubernetes
 else
     deploy_local
 fi

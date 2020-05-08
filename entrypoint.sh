@@ -1,12 +1,6 @@
 #!/bin/bash
 set -e
 
-registration_url="https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/actions/runners/registration-token"
-echo "Requesting registration URL at '${registration_url}'"
-
-payload=$(curl -sX POST -H "Authorization: token ${GITHUB_TOKEN}" ${registration_url})
-export RUNNER_TOKEN=$(echo $payload | jq .token --raw-output)
-
 sudo chown runner:runner .
 tar fxz ../runner.tgz
 sudo rm ../runner.tgz
@@ -14,13 +8,32 @@ sudo rm ../runner.tgz
 RUNNER_WORKDIR=$HOME/_work
 mkdir -p $RUNNER_WORKDIR
 
+[ ! -f auth.json ] && echo "ERROR: No auth config!" && exit 1
+
+case ${GITHUB_AUTH} in
+    app)
+        [ ! -f auth.pem ] && echo "ERROR: No pem file!" && exit 1
+        export RUNNER_TOKEN=$(./Auth/GetRunnerToken --config auth.json) ;;
+    token)
+        [ -z ${GITHUB_REPOSITORY} ] && echo "ERROR: No repository!" && exit 1
+        export RUNNER_TOKEN=$(./Auth/GetRunnerToken --config auth.json --token --repository ${GITHUB_REPOSITORY}) ;;
+    *) echo "ERROR: Guru meditation, unknown error" && exit 1 ;;
+esac
+
 if [ ! -z "$LABELS" ]; then
     LABELS="--labels $LABELS"
 fi
+
+if [ -z "$GITHUB_REPOSITORY" ]; then
+    GITHUB_URL=https://github.com/${GITHUB_OWNER}
+else
+    GITHUB_URL=https://github.com/${GITHUB_REPOSITORY}
+fi
+
 ./config.sh \
     --name $(hostname) $LABELS \
     --token ${RUNNER_TOKEN} \
-    --url https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY} \
+    --url ${GITHUB_URL} \
     --work ${RUNNER_WORKDIR} \
     --unattended \
     --replace
