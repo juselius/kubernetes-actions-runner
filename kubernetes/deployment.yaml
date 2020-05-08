@@ -24,9 +24,6 @@ spec:
             preStop:
               exec:
                 command: [ "/bin/sh", "/home/runner/remove.sh" ]
-          # envFrom:
-          #   - secretRef:
-          #       name: actions-runner
           env:
             - name: GITHUB_OWNER
               value:
@@ -47,6 +44,12 @@ spec:
               mountPath: /certs
             - name: runner
               mountPath: /home/runner
+            - name: appsettings
+              mountPath: /home/runner/auth.json
+              subPath: settings
+            - name: auth-pem
+              mountPath: /home/runner/auth.pem
+              subPath: file
           resources:
             limits:
               cpu: 999m
@@ -66,10 +69,6 @@ spec:
               mountPath: /certs
             - name: runner
               mountPath: /home/runner
-            - name: appsettings
-              mountPath: /home/runner
-            - name: auth-pem
-              mountPath: /home/runner
       volumes:
         - name: docker-storage
           emptyDir: {}
@@ -79,13 +78,7 @@ spec:
           emptyDir: {}
         - name: appsettings
           configMap:
-            name: authsettings
-            items:
-            - key: settings
-              path: auth.json
+            name: settings
         - name: auth-pem
           secret:
             secretName: github-auth-pem
-            items:
-            - key: file
-              path: auth.pem

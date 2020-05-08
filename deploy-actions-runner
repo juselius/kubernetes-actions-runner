@@ -46,6 +46,7 @@ spec:
     spec:
       containers:
         - name: runner
+          image: juselius/actions-runner-safe:latest
           env:
             - name: GITHUB_OWNER
               value: $owner
@@ -72,10 +73,10 @@ EOF
     fi
 
     if [ -f ${settings_dir}/${owner}.json ]; then
-        kubectl create configmap authsettings \
+        kubectl create configmap settings \
             --dry-run \
             --from-file=settings=${settings_dir}/${owner}.json \
-            -o yaml > yaml/authsettings-configmap.yaml
+            -o yaml > yaml/settings-configmap.yaml
     fi
 
     if [ ! -z $repository ]; then
@@ -97,7 +98,7 @@ patchesStrategicMerge:
 resources:
   - github-packages-secret.yaml
   - github-auth-secret.yaml
-  - authsettings-configmap.yaml
+  - settings-configmap.yaml
 EOF
 
     kubectl kustomize yaml
