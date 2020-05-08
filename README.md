@@ -13,13 +13,17 @@ also be run locally, connected directly to the host docker daemon.
 
 ## TL;DR
 
-```
-deploy-actions-runner -o juselius -r inf-3910-webapp -t {PAT} --local
-```
+Run locally with Personal Access Token:
 
 ```
-usage: deploy-actions-runner -o owner -t token [-r repo]
-       [--local] [--kubernetes] [-n namespace] [ -p packages token ]
+deploy-actions-runner --config auth.json --owner juselius \
+  --repository juselius/inf-3910-webapp --docker | bash
+```
+
+Deploy to kubernetes:
+
+```
+deploy-actions-runner --config auth.json --owner serit | kubectl apply -f -
 ```
 
 ### Authentication
