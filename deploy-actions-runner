@@ -82,9 +82,6 @@ EOF
         owner=$(echo $repository | tr / -)
     fi
 
-    # sed "s,@namespace@,$namespace,g
-    #      s,@owner@,$owner,g
-    #      " kubernetes/kustomization.yaml > yaml/kustomization.yaml
 cat << EOF > yaml/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
