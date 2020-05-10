@@ -105,5 +105,5 @@ RUN sudo npm install -g retire
 RUN sudo rm /etc/ssl/openssl.cnf
 
 # add dotnet tools to path to pick up fake and paket installation
-ENV PATH="$HOME/.dotnet/tools:${PATH}"
+ENV PATH="/home/runner/.dotnet/tools:${PATH}"
 
