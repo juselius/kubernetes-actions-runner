@@ -2,8 +2,8 @@
 set -e
 
 sudo chown runner:runner .
-tar fxz ../runner.tgz
-sudo rm ../runner.tgz
+tar fxz ../runner.tar.gz
+sudo rm ../runner.tar.gz
 
 RUNNER_WORKDIR=$HOME/_work
 mkdir -p $RUNNER_WORKDIR

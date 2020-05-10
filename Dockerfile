@@ -52,7 +52,7 @@ RUN sudo rm -rf /var/lib/apt/lists/*
 COPY --from=build /build/deploy ./Auth
 
 RUN sudo chown -R runner:runner . \
-    && sudo tar fcz ../runner.tgz . \
+    && sudo tar fcz ../runner.tar.gz . \
     && rm -rf *
 
 COPY entrypoint.sh /entrypoint.sh
@@ -106,4 +106,10 @@ RUN sudo rm /etc/ssl/openssl.cnf
 
 # add dotnet tools to path to pick up fake and paket installation
 ENV PATH="/home/runner/.dotnet/tools:${PATH}"
+
+RUN sudo chown -R runner:runner . \
+    && sudo gunzip ../runner.tar.gz \
+    && sudo tar fr ../runner.tar . \
+    && sudo gzip ../runner.tar \
+    && rm -rf *
 
