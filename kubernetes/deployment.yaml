@@ -51,8 +51,6 @@ spec:
               mountPath: /home/runner/auth.pem
               subPath: file
           resources:
-            limits:
-              cpu: 999m
             requests:
               cpu: 200m
         - name: docker
@@ -62,6 +60,9 @@ spec:
               value: /certs
           securityContext:
             privileged: true
+          resources:
+            requests:
+              cpu: 200m
           volumeMounts:
             - name: docker-storage
               mountPath: /var/lib/docker
